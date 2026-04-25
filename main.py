@@ -13,7 +13,6 @@ WIDTH = 800
 HEIGHT = 450
 FPS = 60
 
-
 def main():
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
