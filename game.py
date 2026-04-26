@@ -91,8 +91,11 @@ class Game:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
                 elif event.key in (pygame.K_SPACE, pygame.K_UP, pygame.K_w):
-                    self.player.jump()
-                    self._judge_rhythm_jump()
+                    if self._rhythm_active:
+                        # During the 5000m rhythm boss, taps judge the moving circle without jumping.
+                        self._judge_rhythm_jump()
+                    else:
+                        self.player.jump()
                 elif event.key == pygame.K_r and self.game_over:
                     self.reset()
                 elif event.key == pygame.K_f:
@@ -352,9 +355,11 @@ class Game:
             return
 
         if result in ("PERFECT", "GOOD"):
+            # Correctly timed rhythm taps clear any pending lava warning instead of spawning lava.
+            self.lava_timer = 0
             self.shader.trigger_event_pulse()
         else:
-            # Bad rhythm taps still punish the player, but the prompt is now judgeable.
+            # Bad or early/late rhythm taps punish the player with lava.
             self._trigger_lava()
 
     def _trigger_lava(self) -> None:

@@ -108,12 +108,13 @@ class BossEncounter:
 class RhythmBossEncounter:
     """Osu-inspired boss where timed jump hits prevent lava attacks."""
 
-    # Rhythm tuning: the approach circle now lands on the target exactly at HIT_FRAME.
+    # Rhythm tuning: the moving circle reaches the player exactly at HIT_FRAME.
     HIT_FRAME = 82
     PERFECT_WINDOW = 8
     GOOD_WINDOW = 20
     MISS_GRACE_FRAMES = 34
     PLAYER_STANDING_CENTER = (130, FLOOR_Y - 31)
+    PROMPT_START_X = WIDTH - 120
 
     FEEDBACK_COLORS = {
         "PERFECT": LASER_CORE,
@@ -137,7 +138,7 @@ class RhythmBossEncounter:
         self.prompt_duration = self.HIT_FRAME + self.MISS_GRACE_FRAMES
         self.prompt_age = 0
         self.prompt_active = False
-        self.target_center = self.PLAYER_STANDING_CENTER
+        self.target_center = (self.PROMPT_START_X, self.PLAYER_STANDING_CENTER[1])
         self.target_radius = 46
         self.approach_start_radius = 150
         self.successes = 0
@@ -155,6 +156,7 @@ class RhythmBossEncounter:
         events: list[str] = []
         if self.prompt_active:
             self.prompt_age += 1
+            self.target_center = self._prompt_center()
             if self.prompt_age >= self.prompt_duration:
                 self._set_feedback("MISS")
                 self.prompt_active = False
@@ -176,12 +178,13 @@ class RhythmBossEncounter:
         if not self.prompt_active:
             return None
 
+        self.target_center = self._prompt_center()
         dx = player_rect.centerx - self.target_center[0]
         dy = player_rect.centery - self.target_center[1]
         distance = math.hypot(dx, dy)
         timing_error = abs(self.prompt_age - self.HIT_FRAME)
 
-        # Position is still checked, but prompts are now centered on the standing player.
+        # A tap only succeeds when the moving circle is actually crossing the player.
         if distance > self.target_radius + 34:
             result = "BAD"
         elif timing_error <= self.PERFECT_WINDOW:
@@ -232,8 +235,8 @@ class RhythmBossEncounter:
         self.total_prompts += 1
         self.dialogue = random.choice(("TIME IT", "JUMP IN", "HIT THE CIRCLE", "STAY OFF LAVA"))
         self.dialogue_timer = 92
-        # Keep the prompt where a single jump/tap is actually judgeable.
-        self.target_center = self.PLAYER_STANDING_CENTER
+        # Start the prompt on the right; it will reach the player on HIT_FRAME.
+        self.target_center = (self.PROMPT_START_X, self.PLAYER_STANDING_CENTER[1])
 
     def _set_feedback(self, result: str) -> None:
         self.feedback = result
@@ -241,7 +244,15 @@ class RhythmBossEncounter:
         self.dialogue = result
         self.dialogue_timer = 80
 
+    def _prompt_center(self) -> tuple[int, int]:
+        """Move the rhythm circle from right to left until it crosses the player."""
+        hit_x, hit_y = self.PLAYER_STANDING_CENTER
+        travel = hit_x - self.PROMPT_START_X
+        progress = self.prompt_age / self.HIT_FRAME
+        return int(self.PROMPT_START_X + travel * progress), hit_y
+
     def _draw_prompt(self, screen: pygame.Surface) -> None:
+        self.target_center = self._prompt_center()
         center = self.target_center
         hit_progress = min(1.0, self.prompt_age / self.HIT_FRAME)
         remaining = max(0.0, 1.0 - hit_progress)
