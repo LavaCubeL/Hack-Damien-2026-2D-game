@@ -45,6 +45,9 @@ class Player(pygame.sprite.Sprite):
 
     def _make_image(self) -> pygame.Surface:
         surface = pygame.Surface((54, 62), pygame.SRCALPHA)
+        x, y = 27, 31
+        pygame.draw.circle(surface,PLAYER_DARK,(x,y),25)
+        '''
         pygame.draw.rect(surface, PLAYER, (10, 14, 32, 35), border_radius=4)
         pygame.draw.rect(surface, PLAYER, (25, 0, 24, 22), border_radius=4)
         pygame.draw.rect(surface, PLAYER_DARK, (13, 48, 8, 14))
@@ -52,6 +55,7 @@ class Player(pygame.sprite.Sprite):
         pygame.draw.rect(surface, PLAYER_DARK, (0, 26, 16, 9), border_radius=3)
         pygame.draw.circle(surface, STONE_DARK, (41, 8), 3)
         pygame.draw.rect(surface, TEXT, (43, 18, 8, 4), border_radius=2)
+        '''
         return surface
 
     @property
