@@ -40,6 +40,7 @@ class Player(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.velocity_y = 0.0
         self.jumps_used = 0
+        # Normal cave running allows a double jump; the rhythm boss temporarily overrides this.
         self.max_jumps = 2
         self.alive = True
 

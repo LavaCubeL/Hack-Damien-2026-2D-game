@@ -40,3 +40,6 @@ EXPLOSIVE = (235, 78, 58)
 LAVA = (240, 74, 40)
 LAVA_CORE = (255, 198, 72)
 SNOW = (218, 243, 255)
+
+# Turn this on when tuning rhythm prompt timing in the terminal.
+RHYTHM_DEBUG = False

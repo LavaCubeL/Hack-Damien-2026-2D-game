@@ -15,9 +15,11 @@ from settings import (
     ACCENT,
     BOSS,
     BOSS_DARK,
+    FLOOR_Y,
     HAZARD,
     LASER_CORE,
     LAVA,
+    RHYTHM_DEBUG,
     TEXT,
     VOID,
     WIDTH,
@@ -106,6 +108,13 @@ class BossEncounter:
 class RhythmBossEncounter:
     """Osu-inspired boss where timed jump hits prevent lava attacks."""
 
+    # Rhythm tuning: the approach circle now lands on the target exactly at HIT_FRAME.
+    HIT_FRAME = 82
+    PERFECT_WINDOW = 8
+    GOOD_WINDOW = 20
+    MISS_GRACE_FRAMES = 34
+    PLAYER_STANDING_CENTER = (130, FLOOR_Y - 31)
+
     FEEDBACK_COLORS = {
         "PERFECT": LASER_CORE,
         "GOOD": ACCENT,
@@ -124,11 +133,13 @@ class RhythmBossEncounter:
         self.feedback = ""
         self.feedback_timer = 0
         self.prompt_timer = 115
-        self.prompt_duration = 118
+        # The prompt stays alive after the hit frame so a slightly late tap can be judged.
+        self.prompt_duration = self.HIT_FRAME + self.MISS_GRACE_FRAMES
         self.prompt_age = 0
         self.prompt_active = False
-        self.target_center = (145, 305)
-        self.target_radius = 43
+        self.target_center = self.PLAYER_STANDING_CENTER
+        self.target_radius = 46
+        self.approach_start_radius = 150
         self.successes = 0
         self.total_prompts = 0
 
@@ -148,6 +159,8 @@ class RhythmBossEncounter:
                 self._set_feedback("MISS")
                 self.prompt_active = False
                 self.prompt_timer = 74
+                if RHYTHM_DEBUG:
+                    print(f"rhythm miss: age={self.prompt_age}, hit_frame={self.HIT_FRAME}")
                 events.append("lava")
         else:
             self.prompt_timer -= 1
@@ -166,16 +179,24 @@ class RhythmBossEncounter:
         dx = player_rect.centerx - self.target_center[0]
         dy = player_rect.centery - self.target_center[1]
         distance = math.hypot(dx, dy)
-        timing_error = abs(self.prompt_age - 78)
+        timing_error = abs(self.prompt_age - self.HIT_FRAME)
 
-        if distance > self.target_radius + 28:
+        # Position is still checked, but prompts are now centered on the standing player.
+        if distance > self.target_radius + 34:
             result = "BAD"
-        elif timing_error <= 7:
+        elif timing_error <= self.PERFECT_WINDOW:
             result = "PERFECT"
-        elif timing_error <= 17:
+        elif timing_error <= self.GOOD_WINDOW:
             result = "GOOD"
         else:
             result = "BAD"
+
+        if RHYTHM_DEBUG:
+            print(
+                "rhythm tap: "
+                f"age={self.prompt_age}, error={timing_error}, "
+                f"distance={distance:.1f}, result={result}"
+            )
 
         self.prompt_active = False
         self.prompt_timer = 62
@@ -211,7 +232,8 @@ class RhythmBossEncounter:
         self.total_prompts += 1
         self.dialogue = random.choice(("TIME IT", "JUMP IN", "HIT THE CIRCLE", "STAY OFF LAVA"))
         self.dialogue_timer = 92
-        self.target_center = (145, random.choice((285, 335, 365)))
+        # Keep the prompt where a single jump/tap is actually judgeable.
+        self.target_center = self.PLAYER_STANDING_CENTER
 
     def _set_feedback(self, result: str) -> None:
         self.feedback = result
@@ -221,15 +243,20 @@ class RhythmBossEncounter:
 
     def _draw_prompt(self, screen: pygame.Surface) -> None:
         center = self.target_center
-        progress = self.prompt_age / self.prompt_duration
-        approach_radius = int(155 - progress * 112)
-        target_color = ACCENT if abs(self.prompt_age - 78) <= 17 else TEXT
+        hit_progress = min(1.0, self.prompt_age / self.HIT_FRAME)
+        remaining = max(0.0, 1.0 - hit_progress)
+        approach_radius = int(self.target_radius + (self.approach_start_radius - self.target_radius) * remaining)
+        timing_error = abs(self.prompt_age - self.HIT_FRAME)
+        target_color = ACCENT if timing_error <= self.GOOD_WINDOW else TEXT
+        fill_radius = int((self.target_radius - 10) * hit_progress)
 
         pulse = pygame.Surface((220, 220), pygame.SRCALPHA)
-        pygame.draw.circle(pulse, (*ACCENT, 36), (110, 110), max(10, approach_radius), 4)
-        pygame.draw.circle(pulse, (*target_color, 180), (110, 110), self.target_radius, 5)
+        # The inner fill reaches the target ring at the same frame a tap should land.
+        pygame.draw.circle(pulse, (*ACCENT, 42), (110, 110), fill_radius)
+        pygame.draw.circle(pulse, (*ACCENT, 36), (110, 110), max(self.target_radius, approach_radius), 4)
+        pygame.draw.circle(pulse, (*target_color, 190), (110, 110), self.target_radius, 5)
         pygame.draw.circle(pulse, (0, 0, 0, 120), (110, 110), self.target_radius - 8)
-        pygame.draw.circle(pulse, (*LASER_CORE, 210), (110, 110), 8)
+        pygame.draw.circle(pulse, (*LASER_CORE, 220), (110, 110), 8)
         screen.blit(pulse, pulse.get_rect(center=center), special_flags=pygame.BLEND_RGBA_ADD)
 
     def _draw_bubble(self, screen: pygame.Surface, body_rect: pygame.Rect, message: str, color: tuple[int, int, int]) -> None:

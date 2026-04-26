@@ -193,6 +193,9 @@ class Game:
 
     def _spawn_rhythm_boss(self) -> None:
         self.rhythm_boss = RhythmBossEncounter(self.event_font)
+        # The 5000m rhythm fight is tap-timing based, so disable double jump only here.
+        self.player.max_jumps = 1
+        self.player.jumps_used = min(self.player.jumps_used, self.player.max_jumps)
         self.lasers.clear()
         self.floating_texts.clear()
         self.obstacles.empty()
@@ -334,6 +337,8 @@ class Game:
 
         if self.rhythm_boss.done:
             self.rhythm_boss = None
+            # Restore normal movement as soon as the 5000m rhythm fight is over.
+            self.player.max_jumps = 2
             self.hazard_pause = 140
             self.laser_cooldown = 320
             self.lava_timer = 0
@@ -349,6 +354,7 @@ class Game:
         if result in ("PERFECT", "GOOD"):
             self.shader.trigger_event_pulse()
         else:
+            # Bad rhythm taps still punish the player, but the prompt is now judgeable.
             self._trigger_lava()
 
     def _trigger_lava(self) -> None:
