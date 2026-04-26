@@ -62,6 +62,8 @@ class Game:
         self.rhythm_boss: RhythmBossEncounter | None = None
         self.boss_roll_checked = False
         self.rhythm_boss_spawned = False
+        # After the first 5000m fight, roll a 50% rhythm-boss respawn every 100m past 7000m.
+        self.next_rhythm_boss_roll = 7100
         self.lava_timer = 0
         self.ground = pygame.sprite.Group(GroundChunk(0, FLOOR_Y, WIDTH), GroundChunk(WIDTH, FLOOR_Y, WIDTH))
         self.ceiling = pygame.sprite.Group(CeilingChunk(0, WIDTH), CeilingChunk(WIDTH, WIDTH))
@@ -188,11 +190,23 @@ class Game:
         self.shader.trigger_event_pulse()
 
     def _check_rhythm_boss_spawn(self) -> None:
-        if self.rhythm_boss_spawned or self.score < 5000 or self._boss_active:
+        if self._boss_active or self._rhythm_active:
             return
 
-        self.rhythm_boss_spawned = True
-        self._spawn_rhythm_boss()
+        if not self.rhythm_boss_spawned:
+            if self.score < 5000:
+                return
+            self.rhythm_boss_spawned = True
+            self._spawn_rhythm_boss()
+            return
+
+        if self.score < self.next_rhythm_boss_roll:
+            return
+
+        # Past 7000m, every 100m checkpoint gets one 50% chance to respawn this boss.
+        self.next_rhythm_boss_roll += 100
+        if random.random() < 0.5:
+            self._spawn_rhythm_boss()
 
     def _spawn_rhythm_boss(self) -> None:
         self.rhythm_boss = RhythmBossEncounter(self.event_font)

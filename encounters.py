@@ -110,11 +110,12 @@ class RhythmBossEncounter:
 
     # Rhythm tuning: the moving circle reaches the player exactly at HIT_FRAME.
     HIT_FRAME = 82
-    PERFECT_WINDOW = 8
-    GOOD_WINDOW = 20
-    MISS_GRACE_FRAMES = 34
+    PERFECT_WINDOW = 5
+    GOOD_WINDOW = 12
+    MISS_GRACE_FRAMES = 24
     PLAYER_STANDING_CENTER = (130, FLOOR_Y - 31)
     PROMPT_START_X = WIDTH - 120
+    PROMPTS_BEFORE_DESPAWN = 8
 
     FEEDBACK_COLORS = {
         "PERFECT": LASER_CORE,
@@ -169,7 +170,8 @@ class RhythmBossEncounter:
             if self.prompt_timer <= 0:
                 self._start_prompt()
 
-        if self.total_prompts >= 8 and not self.prompt_active and self.feedback_timer == 0:
+        # Despawn after a fixed set so later 100m checkpoints can roll a fresh encounter.
+        if self.total_prompts >= self.PROMPTS_BEFORE_DESPAWN and not self.prompt_active and self.feedback_timer == 0:
             self.done = True
 
         return events
