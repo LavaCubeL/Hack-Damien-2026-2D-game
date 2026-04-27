@@ -20,8 +20,8 @@ At 5000 meters, a second rhythm boss starts an osu-inspired jump-circle section.
 ## Run
 
 ```powershell
-pip install -r requirements.txt
-python main.py
+download the project
+run the main.exe in the dist folder
 ```
 
 ## Controls
